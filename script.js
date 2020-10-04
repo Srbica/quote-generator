@@ -1,61 +1,86 @@
-const quoteContainer = document.getElementById('quote-container');
-const quoteText = document.getElementById('quote');
-const authorText = document.getElementById('author');
-const twitterBtn = document.getElementById('twitter');
-const newQuoteBtn = document.getElementById('new-quote');
+const imageContainer = document.getElementById('image-container');
 const loader = document.getElementById('loader');
 
-function showLoadingSpinner() {
-   loader.hidden = false;
-   quoteContainer.hidden = true;
-}
+let ready = false;
+let imagesLoaded = 0;
+let totalImages = 0;
+let photosArray = [];
 
-function removeLoadingSpinner() {
-   if(!loader.hidden) {
-      quoteContainer.hidden = false;
+// Unsplash API
+let count = 5;
+const apiKey = '6PHfgiwsd4YpZq7Ubgq1BbCvuq6TgJpxamH5dhUuZCc';
+const apiUrl = `https://api.unsplash.com/photos/random/?client_id=${apiKey}&count=${count}`;
+
+// Check if all images were loaded
+function imageLoaded() {
+   imagesLoaded++;
+   if (imagesLoaded === totalImages) {
+      ready = true;
       loader.hidden = true;
+      count = 30;
    }
 }
 
-// Get Quote From API
-async function getQuote() {
-   showLoadingSpinner();
-   const proxyUrl = 'https://cors-anywhere.herokuapp.com/'
-   const apiUrl = 'http://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=json';
+// Helper Function to Set Attributes on DOM Elements
+function setAttributes(element, attributes) {
+   for (const key in attributes) {
+      element.setAttribute(key, attributes[key]);
+   }
+}
+
+// Create Elements For Links & Photos, Add to DOM
+function displayPhotos() {
+   imagesLoaded = 0;
+   totalImages = photosArray.length;
+   // Run f for each object in photosArray
+   photosArray.forEach(photo => {
+      // Create <a> to link to Unsplash
+      const item = document.createElement('a');
+      // item.setAttribute('href', photo.links.html);
+      // item.setAttribute('target', '_blank');
+      setAttributes(item, {
+         href: photo.links.html,
+         target: '_blank',
+      });
+      // Crete <img> for photo
+      const img = document.createElement('img');
+      // img.setAttribute('src', photo.urls.regular);
+      // img.setAttribute('alt', photo.alt_description);
+      // img.setAttribute('title', photo.alt_description);
+      setAttributes(img, {
+         src: photo.urls.regular,
+         alt: photo.alt_description,
+         title: photo.alt_description,
+      });
+      // Event Listener, check when each is finished loading
+      img.addEventListener('load', imageLoaded);
+      // Put <img> inside <a>, then put both inside imageContainer Element
+      item.appendChild(img);
+      imageContainer.appendChild(item);
+   });
+}
+
+// Get photos from Unsplash API
+async function getPhotos() {
    try {
-      const response = await fetch(proxyUrl + apiUrl);
-      const data = await response.json();
-      // Check if Author is blank and replace it with 'Unknown'
-      if (data.quoteAuthor === '') {
-         authorText.innerText = 'Unknown';
-      } else {
-         authorText.innerText = data.quoteAuthor;
-      }
-      //Reduce font size for long quotes
-      if (data.quoteText.length > 100) {
-         quoteText.classList.add('long-quote');
-      } else {
-         quoteText.classList.remove('long-quote');
-      }
-      quoteText.innerText = data.quoteText;
-      // Stop Loader, Show Quote
-      removeLoadingSpinner();
+      const response = await fetch(apiUrl);
+      photosArray = await response.json();
+      displayPhotos();
    } catch (error) {
-      getQuote();
+      // Catch error here
    }
 }
 
-//Tweet Quote
-function tweetQuote() {
-   const quote = quoteText.innerText;
-   const author = authorText.innerText;
-   const twitterUrl = `https://twitter.com/intent/tweet?text=${quote} - ${author}`;
-   window.open(twitterUrl, '_blank')
-}
+// Check to see if scrolling near bottom of page, Load more Photos
+window.addEventListener('scroll', () => {
+   if (
+      (window.innerHeight + window,
+      scrollY >= document.body.offsetHeight - 1000 && ready)
+   ) {
+      ready = false;
+      getPhotos();
+   }
+});
 
-//Event Listeners
-newQuoteBtn.addEventListener('click', getQuote);
-twitterBtn.addEventListener('click', tweetQuote);
-
-//On Load
-getQuote();
+// On Load
+getPhotos();
